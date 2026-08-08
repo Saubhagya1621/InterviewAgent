@@ -1,19 +1,76 @@
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { sendMessage } from "../api/interviewApi";
+import ParticleField from "../components/ParticleField";
+
+const bubbleVariants = {
+  initial: (isUser) => ({ opacity: 0, y: 20, x: isUser ? 20 : -20, scale: 0.9 }),
+  animate: { opacity: 1, y: 0, x: 0, scale: 1 },
+  exit: { opacity: 0, scale: 0.9 },
+};
 
 const Bubble = ({ role, content }) => {
   const isUser = role === "user";
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
+    <motion.div
+      custom={isUser}
+      variants={bubbleVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+    >
+      <motion.div
+        whileHover={{ scale: 1.015 }}
         className={`max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
           isUser
-            ? "bg-accent text-bg font-medium"
+            ? "bg-accent text-bg font-medium shadow-lg shadow-accent/20"
             : "bg-surface border border-border text-text"
         }`}
       >
         {content}
-      </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const TypingIndicator = () => (
+  <motion.div
+    initial={{ opacity: 0, y: 12, scale: 0.9 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.9 }}
+    className="flex justify-start"
+  >
+    <div className="bg-surface border border-border rounded-xl px-4 py-3 flex items-center gap-2">
+      <span className="text-muted text-xs mr-1">thinking</span>
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="w-2 h-2 rounded-full bg-accent"
+          animate={{ y: [0, -6, 0], opacity: [0.4, 1, 0.4] }}
+          transition={{
+            duration: 0.9,
+            repeat: Infinity,
+            delay: i * 0.15,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  </motion.div>
+);
+
+const ProgressBar = ({ questionCount, min }) => {
+  const pct = Math.min((questionCount / min) * 100, 100);
+  return (
+    <div className="w-28 h-1.5 bg-border rounded-full overflow-hidden relative">
+      <motion.div
+        className="h-full bg-gradient-to-r from-accent to-amber-300 rounded-full"
+        initial={{ width: 0 }}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      />
     </div>
   );
 };
@@ -47,7 +104,7 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
           ...prev,
           { role: "assistant", content: data.reply },
         ]);
-        onComplete(data.feedback);
+        setTimeout(() => onComplete(data.feedback), 700);
       } else {
         setMessages((prev) => [
           ...prev,
@@ -76,35 +133,70 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col max-w-2xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6 border-b border-border pb-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen flex flex-col max-w-2xl mx-auto px-4 py-8 relative"
+    >
+      <ParticleField />
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between mb-6 pb-4 px-5 py-4 rounded-2xl"
+        style={{
+          background: "linear-gradient(135deg, rgba(22,31,48,0.7), rgba(17,24,38,0.5))",
+          backdropFilter: "blur(16px)",
+          border: "1px solid rgba(245,166,35,0.12)",
+        }}
+      >
         <div>
           <p className="font-display font-semibold text-lg">
             {candidate.member?.name}
           </p>
           <p className="text-muted text-xs">{candidate.member?.jobRole}</p>
         </div>
-        <div className="text-right">
-          <p className="text-accent font-display font-semibold">Q{questionCount}</p>
-          <p className="text-muted text-xs uppercase tracking-wide">min. 8</p>
+        <div className="text-right flex flex-col items-end gap-1.5">
+          <div className="flex items-baseline gap-1.5">
+            <AnimatePresence mode="popLayout">
+              <motion.p
+                key={questionCount}
+                initial={{ scale: 1.6, y: -10, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                exit={{ scale: 0.6, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                className="font-display font-semibold text-accent"
+              >
+                Q{questionCount}
+              </motion.p>
+            </AnimatePresence>
+            <p className="text-muted text-xs uppercase tracking-wide">min. 8</p>
+          </div>
+          <ProgressBar questionCount={questionCount} min={8} />
         </div>
-      </div>
+      </motion.div>
 
       <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1">
-        {messages.map((m, i) => (
-          <Bubble key={i} role={m.role} content={m.content} />
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-surface border border-border rounded-xl px-4 py-3 text-muted text-sm">
-              Interviewer is typing...
-            </div>
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {messages.map((m, i) => (
+            <Bubble key={i} role={m.role} content={m.content} />
+          ))}
+          {loading && <TypingIndicator key="typing" />}
+        </AnimatePresence>
         <div ref={scrollRef} />
       </div>
 
-      <div className="mt-4 flex gap-2 border border-border rounded-xl bg-surface p-2">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mt-4 flex gap-2 rounded-2xl p-2 focus-within:border-accent/60 transition-colors"
+        style={{
+          background: "linear-gradient(135deg, rgba(22,31,48,0.7), rgba(17,24,38,0.5))",
+          backdropFilter: "blur(16px)",
+          border: "1px solid rgba(245,166,35,0.12)",
+        }}
+      >
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -113,15 +205,17 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
           rows={1}
           className="flex-1 bg-transparent outline-none resize-none text-sm px-2 py-2 placeholder:text-muted"
         />
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.92 }}
           onClick={handleSend}
           disabled={loading || !input.trim()}
           className="bg-accent text-bg font-medium text-sm px-4 py-2 rounded-lg disabled:opacity-40"
         >
           Send
-        </button>
-      </div>
-    </div>
+        </motion.button>
+      </motion.div>
+    </motion.div>
   );
 };
 

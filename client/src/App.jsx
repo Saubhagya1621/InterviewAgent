@@ -1,13 +1,28 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Landing from "./screens/Landing";
 import Chat from "./screens/Chat";
 import Feedback from "./screens/Feedback";
+import RobotMascot from "./components/RobotMascot";
 import { startInterview } from "./api/interviewApi";
 
 const SCREEN = {
   LANDING: "landing",
   CHAT: "chat",
   FEEDBACK: "feedback",
+};
+
+const screenTransition = {
+  initial: { opacity: 0, x: 24 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -24 },
+  transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+};
+
+const MASCOT_CONFIG = {
+  [SCREEN.LANDING]: { mood: "idle", message: "Pick a candidate to begin" },
+  [SCREEN.CHAT]: { mood: "thinking", message: "" },
+  [SCREEN.FEEDBACK]: { mood: "happy", message: "Interview wrapped up!" },
 };
 
 function App() {
@@ -60,28 +75,38 @@ function App() {
     );
   }
 
-  if (screen === SCREEN.LANDING) {
-    return <Landing candidates={candidates} onStart={handleStart} />;
-  }
+  const mascotConfig = MASCOT_CONFIG[screen] || MASCOT_CONFIG[SCREEN.LANDING];
 
-  if (screen === SCREEN.CHAT) {
-    return (
-      <Chat
-        sessionId={sessionId}
-        candidate={candidate}
-        initialReply={initialReply}
-        onComplete={handleComplete}
-      />
-    );
-  }
+  return (
+    <>
+      <AnimatePresence mode="wait">
+        {screen === SCREEN.LANDING && (
+          <motion.div key="landing" {...screenTransition}>
+            <Landing candidates={candidates} onStart={handleStart} />
+          </motion.div>
+        )}
 
-  if (screen === SCREEN.FEEDBACK) {
-    return (
-      <Feedback candidate={candidate} feedback={feedback} onRestart={handleRestart} />
-    );
-  }
+        {screen === SCREEN.CHAT && (
+          <motion.div key="chat" {...screenTransition}>
+            <Chat
+              sessionId={sessionId}
+              candidate={candidate}
+              initialReply={initialReply}
+              onComplete={handleComplete}
+            />
+          </motion.div>
+        )}
 
-  return null;
+        {screen === SCREEN.FEEDBACK && (
+          <motion.div key="feedback" {...screenTransition}>
+            <Feedback candidate={candidate} feedback={feedback} onRestart={handleRestart} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <RobotMascot mood={mascotConfig.mood} message={mascotConfig.message} />
+    </>
+  );
 }
 
 export default App;

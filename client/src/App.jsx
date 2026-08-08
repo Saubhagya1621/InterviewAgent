@@ -4,9 +4,11 @@ import Landing from "./screens/Landing";
 import Chat from "./screens/Chat";
 import Feedback from "./screens/Feedback";
 import RobotMascot from "./components/RobotMascot";
+import IntroScreen from "./components/IntroScreen";
 import { startInterview } from "./api/interviewApi";
 
 const SCREEN = {
+  INTRO: "intro",
   LANDING: "landing",
   CHAT: "chat",
   FEEDBACK: "feedback",
@@ -26,7 +28,7 @@ const MASCOT_CONFIG = {
 };
 
 function App() {
-  const [screen, setScreen] = useState(SCREEN.LANDING);
+  const [screen, setScreen] = useState(SCREEN.INTRO);
   const [candidates, setCandidates] = useState([]);
   const [candidate, setCandidate] = useState(null);
   const [sessionId, setSessionId] = useState(null);
@@ -34,6 +36,7 @@ function App() {
   const [feedback, setFeedback] = useState(null);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
+  const [mascotArrived, setMascotArrived] = useState(false);
 
   useEffect(() => {
     fetch("/candidates.json")
@@ -41,6 +44,11 @@ function App() {
       .then((data) => setCandidates(data.candidates || []))
       .catch(() => setError("Could not load candidate data"));
   }, []);
+
+  const handleIntroFinish = () => {
+    setScreen(SCREEN.LANDING);
+    setTimeout(() => setMascotArrived(true), 350);
+  };
 
   const handleStart = async (selected) => {
     setCandidate(selected);
@@ -77,6 +85,10 @@ function App() {
         <p className="text-muted text-sm max-w-sm">{error}</p>
       </div>
     );
+  }
+
+  if (screen === SCREEN.INTRO) {
+    return <IntroScreen onFinish={handleIntroFinish} />;
   }
 
   const mascotConfig = MASCOT_CONFIG[screen] || MASCOT_CONFIG[SCREEN.LANDING];
@@ -127,7 +139,9 @@ function App() {
         )}
       </AnimatePresence>
 
-      <RobotMascot mood={mascotConfig.mood} message={mascotConfig.message} />
+      {mascotArrived && (
+        <RobotMascot mood={mascotConfig.mood} message={mascotConfig.message} />
+      )}
     </>
   );
 }

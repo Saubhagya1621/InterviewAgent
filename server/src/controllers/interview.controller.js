@@ -21,6 +21,7 @@ const curriculum = JSON.parse(
 
 const MIN_QUESTIONS = 8;
 const MIN_DISTINCT_DAYS = 4;
+const MAX_QUESTIONS = 14; // hard safety cap in case the LLM never signals completion
 
 const getDayDetails = (dayNumbers) =>
   curriculum.days.filter((d) => dayNumbers.includes(d.day));
@@ -34,26 +35,38 @@ const parseJsonSafe = (text) => {
 };
 
 const callForNextTurn = async (systemPrompt, history) => {
-  const raw = await chatComplete(
-    [{ role: "system", content: systemPrompt }, ...history],
-    { jsonMode: true }
-  );
+  let raw;
+  try {
+    raw = await chatComplete(
+      [{ role: "system", content: systemPrompt }, ...history],
+      { jsonMode: true }
+    );
+  } catch (err) {
+    throw new ApiError(502, "The interview agent is temporarily unavailable. Please try again.");
+  }
+
   const parsed = parseJsonSafe(raw);
   const result = NextTurnSchema.safeParse(parsed);
   if (result.success) return result.data;
 
   // one retry with a stricter nudge
-  const retryRaw = await chatComplete(
-    [
-      { role: "system", content: systemPrompt },
-      ...history,
-      {
-        role: "system",
-        content: "Your last response was not valid JSON matching the required shape. Respond again with ONLY valid JSON.",
-      },
-    ],
-    { jsonMode: true }
-  );
+  let retryRaw;
+  try {
+    retryRaw = await chatComplete(
+      [
+        { role: "system", content: systemPrompt },
+        ...history,
+        {
+          role: "system",
+          content: "Your last response was not valid JSON matching the required shape. Respond again with ONLY valid JSON.",
+        },
+      ],
+      { jsonMode: true }
+    );
+  } catch (err) {
+    throw new ApiError(502, "The interview agent is temporarily unavailable. Please try again.");
+  }
+
   const retryParsed = parseJsonSafe(retryRaw);
   const retryResult = NextTurnSchema.safeParse(retryParsed);
   if (retryResult.success) return retryResult.data;
@@ -67,24 +80,37 @@ const callForFeedback = async (candidate, history, coveredDays) => {
     .join("\n");
 
   const prompt = buildFeedbackPrompt(candidate, transcript, coveredDays);
-  const raw = await chatComplete([{ role: "system", content: prompt }], {
-    jsonMode: true,
-    temperature: 0.4,
-  });
+
+  let raw;
+  try {
+    raw = await chatComplete([{ role: "system", content: prompt }], {
+      jsonMode: true,
+      temperature: 0.4,
+    });
+  } catch (err) {
+    throw new ApiError(502, "Could not generate feedback right now. Please try again.");
+  }
+
   const parsed = parseJsonSafe(raw);
   const result = FeedbackSchema.safeParse(parsed);
   if (result.success) return result.data;
 
-  const retryRaw = await chatComplete(
-    [
-      { role: "system", content: prompt },
-      {
-        role: "system",
-        content: "Your last response was not valid JSON matching the required feedback shape. Respond again with ONLY valid JSON.",
-      },
-    ],
-    { jsonMode: true, temperature: 0.4 }
-  );
+  let retryRaw;
+  try {
+    retryRaw = await chatComplete(
+      [
+        { role: "system", content: prompt },
+        {
+          role: "system",
+          content: "Your last response was not valid JSON matching the required feedback shape. Respond again with ONLY valid JSON.",
+        },
+      ],
+      { jsonMode: true, temperature: 0.4 }
+    );
+  } catch (err) {
+    throw new ApiError(502, "Could not generate feedback right now. Please try again.");
+  }
+
   const retryParsed = parseJsonSafe(retryRaw);
   const retryResult = FeedbackSchema.safeParse(retryParsed);
   if (retryResult.success) return retryResult.data;
@@ -101,11 +127,15 @@ const handleInterview = asyncHandler(async (req, res) => {
 
   // ---- START ----
   if (!hasSession(sessionId)) {
-    if (!candidate) {
-      throw new ApiError(400, "candidate is required to start a new session");
+    if (!candidate || !candidate.member || !candidate.member.name) {
+      throw new ApiError(400, "A valid candidate object with member.name is required to start a new session");
     }
 
     const targetDays = selectTargetDays(candidate, curriculum.days);
+
+    if (!targetDays.length) {
+      throw new ApiError(422, "No curriculum days available to interview this candidate on");
+    }
 
     const state = createSession(sessionId, {
       candidate,
@@ -148,7 +178,8 @@ const handleInterview = asyncHandler(async (req, res) => {
     ? [...new Set([...state.askedDays, nextTurn.coveredDay])]
     : state.askedDays;
 
-  const shouldEnd = enoughCoverage && nextTurn.interviewComplete;
+  const shouldEnd =
+    (enoughCoverage && nextTurn.interviewComplete) || state.turnCount + 1 >= MAX_QUESTIONS;
 
   if (shouldEnd) {
     const finalHistory = [...history, { role: "assistant", content: nextTurn.reply }];

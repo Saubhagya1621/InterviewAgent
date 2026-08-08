@@ -202,6 +202,15 @@ const Landing = ({ candidates, onStart }) => {
             <CandidateCard key={c.member.id} candidate={c} onSelect={onStart} index={i} />
           ))}
         </div>
+        {candidates.length === 0 && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-muted text-sm text-center py-12"
+          >
+            No candidates available right now. Check back shortly.
+          </motion.p>
+        )}
       </motion.div>
     </div>
   );

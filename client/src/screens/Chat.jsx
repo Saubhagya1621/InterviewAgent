@@ -9,7 +9,7 @@ const bubbleVariants = {
   exit: { opacity: 0, scale: 0.9 },
 };
 
-const Bubble = ({ role, content }) => {
+const Bubble = ({ role, content, isError, onRetry }) => {
   const isUser = role === "user";
   return (
     <motion.div
@@ -24,12 +24,22 @@ const Bubble = ({ role, content }) => {
       <motion.div
         whileHover={{ scale: 1.015 }}
         className={`max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
-          isUser
+          isError
+            ? "bg-red-500/10 border border-red-500/30 text-red-300"
+            : isUser
             ? "bg-accent text-bg font-medium shadow-lg shadow-accent/20"
             : "bg-surface border border-border text-text"
         }`}
       >
         {content}
+        {isError && (
+          <button
+            onClick={onRetry}
+            className="block mt-2 text-xs font-medium text-red-300 underline underline-offset-2 hover:text-red-200"
+          >
+            Retry
+          </button>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -88,12 +98,18 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
+  const [lastFailedMessage, setLastFailedMessage] = useState(null);
 
-    const userMessage = { role: "user", content: input.trim() };
-    setMessages((prev) => [...prev, userMessage]);
+  const handleSend = async (overrideMessage) => {
+    const messageText = overrideMessage ?? input.trim();
+    if (!messageText || loading) return;
+
+    const userMessage = { role: "user", content: messageText };
+    if (!overrideMessage) {
+      setMessages((prev) => [...prev, userMessage]);
+    }
     setInput("");
+    setLastFailedMessage(null);
     setLoading(true);
 
     try {
@@ -113,16 +129,24 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
         setQuestionCount((c) => c + 1);
       }
     } catch (err) {
+      setLastFailedMessage(userMessage.content);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Something went wrong reaching the interviewer. Please try again.",
+          content: "Couldn't reach the interviewer. Check your connection and retry.",
+          isError: true,
         },
       ]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    if (!lastFailedMessage) return;
+    setMessages((prev) => prev.filter((m) => !m.isError));
+    handleSend(lastFailedMessage);
   };
 
   const handleKeyDown = (e) => {
@@ -179,7 +203,13 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
       <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1">
         <AnimatePresence initial={false}>
           {messages.map((m, i) => (
-            <Bubble key={i} role={m.role} content={m.content} />
+            <Bubble
+              key={i}
+              role={m.role}
+              content={m.content}
+              isError={m.isError}
+              onRetry={handleRetry}
+            />
           ))}
           {loading && <TypingIndicator key="typing" />}
         </AnimatePresence>

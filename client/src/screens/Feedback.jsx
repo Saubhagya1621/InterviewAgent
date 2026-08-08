@@ -65,6 +65,9 @@ const Section = ({ title, items, accentClass, delay }) => (
       transition={{ delayChildren: delay }}
       className="flex flex-col gap-2"
     >
+      {items.length === 0 && (
+        <li className="text-sm text-muted italic">None noted for this interview.</li>
+      )}
       {items.map((item, i) => (
         <motion.li
           key={i}

@@ -1,0 +1,16 @@
+{
+  "sessionId": "test-1",
+  "candidate": {
+    "member": {
+      "id": "CAND-001",
+      "name": "Sarah Johnson",
+      "jobRole": "Senior Data Engineer",
+      "yearsExperience": 9
+    },
+    "missions": [
+      { "day": 29, "title": "Monitoring, Logging & Observability", "skipped": true },
+      { "day": 12, "title": "Prompt Engineering Fundamentals", "passed": true, "attempts": 4 }
+    ],
+    "signals": { "missionsCompleted": 30 }
+  }
+}

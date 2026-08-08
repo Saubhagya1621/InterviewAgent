@@ -1,0 +1,26 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-text font-sans;
+  background-image: radial-gradient(circle at 20% -10%, #f5a62314, transparent 40%),
+    radial-gradient(circle at 90% 10%, #1e2a42, transparent 45%);
+  background-attachment: fixed;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #232d3f;
+  border-radius: 8px;
+}

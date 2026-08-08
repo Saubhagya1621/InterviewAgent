@@ -4,3 +4,5 @@ dist/
 build/
 .DS_Store
 *.log
+server\test-continue.json
+server\test-payload.json

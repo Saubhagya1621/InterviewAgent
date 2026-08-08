@@ -39,6 +39,10 @@ function App() {
   const [mascotArrived, setMascotArrived] = useState(false);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [screen]);
+
+  useEffect(() => {
     fetch("/candidates.json")
       .then((res) => res.json())
       .then((data) => setCandidates(data.candidates || []))

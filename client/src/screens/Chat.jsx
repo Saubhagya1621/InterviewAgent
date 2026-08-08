@@ -92,6 +92,7 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [questionCount, setQuestionCount] = useState(1);
+  const [currentFocus, setCurrentFocus] = useState(null);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -127,6 +128,7 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
           { role: "assistant", content: data.reply },
         ]);
         setQuestionCount((c) => c + 1);
+        if (data.currentFocus) setCurrentFocus(data.currentFocus);
       }
     } catch (err) {
       setLastFailedMessage(userMessage.content);
@@ -199,6 +201,27 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
           <ProgressBar questionCount={questionCount} min={8} />
         </div>
       </motion.div>
+
+      <AnimatePresence mode="wait">
+        {currentFocus && (
+          <motion.div
+            key={currentFocus.day}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3 }}
+            className="mb-4 -mt-2 inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full text-xs"
+            style={{
+              background: "rgba(245,166,35,0.08)",
+              border: "1px solid rgba(245,166,35,0.2)",
+              color: "#f5a623",
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+            Day {currentFocus.day} &middot; {currentFocus.title}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1">
         <AnimatePresence initial={false}>

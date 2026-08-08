@@ -33,6 +33,7 @@ function App() {
   const [initialReply, setInitialReply] = useState("");
   const [feedback, setFeedback] = useState(null);
   const [error, setError] = useState(null);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     fetch("/candidates.json")
@@ -43,6 +44,7 @@ function App() {
 
   const handleStart = async (selected) => {
     setCandidate(selected);
+    setStarting(true);
     const newSessionId = `${selected.member.id}-${Date.now()}`;
     setSessionId(newSessionId);
 
@@ -52,6 +54,8 @@ function App() {
       setScreen(SCREEN.CHAT);
     } catch (err) {
       setError("Could not start the interview. Is the backend running?");
+    } finally {
+      setStarting(false);
     }
   };
 
@@ -82,7 +86,7 @@ function App() {
       <AnimatePresence mode="wait">
         {screen === SCREEN.LANDING && (
           <motion.div key="landing" {...screenTransition}>
-            <Landing candidates={candidates} onStart={handleStart} />
+            <Landing candidates={candidates} onStart={handleStart} starting={starting} />
           </motion.div>
         )}
 
@@ -100,6 +104,25 @@ function App() {
         {screen === SCREEN.FEEDBACK && (
           <motion.div key="feedback" {...screenTransition}>
             <Feedback candidate={candidate} feedback={feedback} onRestart={handleRestart} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {starting && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4"
+            style={{ background: "rgba(10,14,20,0.85)", backdropFilter: "blur(6px)" }}
+          >
+            <motion.div
+              className="w-10 h-10 rounded-full border-2 border-accent/30 border-t-accent"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            />
+            <p className="text-muted text-sm">Starting your interview...</p>
           </motion.div>
         )}
       </AnimatePresence>

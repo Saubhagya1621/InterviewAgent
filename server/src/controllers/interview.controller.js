@@ -26,6 +26,20 @@ const MAX_QUESTIONS = 14; // hard safety cap in case the LLM never signals compl
 const getDayDetails = (dayNumbers) =>
   curriculum.days.filter((d) => dayNumbers.includes(d.day));
 
+// Deterministic fallback question when the LLM refuses to stop trying to
+// end the interview early. Picks the next target day not yet covered.
+const buildFallbackQuestion = (targetDayDetails, askedDays) => {
+  const remaining = targetDayDetails.find((d) => !askedDays.includes(d.day));
+  const day = remaining || targetDayDetails[0];
+  const objective = day.objectives?.[0] || day.title;
+  return {
+    reply: `We're not quite done yet — let's continue. On Day ${day.day} ("${day.title}"), can you walk me through ${objective.toLowerCase()}?`,
+    moveToNextTopic: true,
+    coveredDay: day.day,
+    interviewComplete: false,
+  };
+};
+
 const parseJsonSafe = (text) => {
   try {
     return JSON.parse(text);
@@ -42,6 +56,7 @@ const callForNextTurn = async (systemPrompt, history) => {
       { jsonMode: true }
     );
   } catch (err) {
+    console.error("[callForNextTurn] Groq call failed:", err.message);
     throw new ApiError(502, "The interview agent is temporarily unavailable. Please try again.");
   }
 
@@ -64,6 +79,7 @@ const callForNextTurn = async (systemPrompt, history) => {
       { jsonMode: true }
     );
   } catch (err) {
+    console.error("[callForNextTurn] Groq call failed:", err.message);
     throw new ApiError(502, "The interview agent is temporarily unavailable. Please try again.");
   }
 
@@ -88,12 +104,19 @@ const callForFeedback = async (candidate, history, coveredDays) => {
       temperature: 0.4,
     });
   } catch (err) {
+    console.error("[callForFeedback] Groq call failed:", err.message);
     throw new ApiError(502, "Could not generate feedback right now. Please try again.");
   }
 
   const parsed = parseJsonSafe(raw);
   const result = FeedbackSchema.safeParse(parsed);
   if (result.success) return result.data;
+
+  console.error("[callForFeedback] Schema validation failed on first attempt.");
+  console.error("[callForFeedback] Raw output:", raw);
+  if (parsed && !result.success) {
+    console.error("[callForFeedback] Validation errors:", JSON.stringify(result.error.issues));
+  }
 
   let retryRaw;
   try {
@@ -108,12 +131,19 @@ const callForFeedback = async (candidate, history, coveredDays) => {
       { jsonMode: true, temperature: 0.4 }
     );
   } catch (err) {
+    console.error("[callForFeedback] Groq call failed:", err.message);
     throw new ApiError(502, "Could not generate feedback right now. Please try again.");
   }
 
   const retryParsed = parseJsonSafe(retryRaw);
   const retryResult = FeedbackSchema.safeParse(retryParsed);
   if (retryResult.success) return retryResult.data;
+
+  console.error("[callForFeedback] Schema validation failed on retry.");
+  console.error("[callForFeedback] Retry raw output:", retryRaw);
+  if (retryParsed && !retryResult.success) {
+    console.error("[callForFeedback] Retry validation errors:", JSON.stringify(retryResult.error.issues));
+  }
 
   throw new ApiError(502, "Interview agent failed to produce valid feedback");
 };
@@ -168,22 +198,18 @@ const handleInterview = asyncHandler(async (req, res) => {
 
   const history = [...state.history, { role: "user", content: message }];
 
-  const enoughCoverage =
-    state.turnCount >= MIN_QUESTIONS &&
-    new Set(state.askedDays).size >= MIN_DISTINCT_DAYS;
-
   const nextTurn = await callForNextTurn(systemPrompt, history);
 
   const askedDays = nextTurn.coveredDay
     ? [...new Set([...state.askedDays, nextTurn.coveredDay])]
     : state.askedDays;
 
-  const shouldEnd =
-    (enoughCoverage && nextTurn.interviewComplete) || state.turnCount + 1 >= MAX_QUESTIONS;
+  const shouldEnd = nextTurn.interviewComplete || state.turnCount + 1 >= MAX_QUESTIONS;
 
   if (shouldEnd) {
     const finalHistory = [...history, { role: "assistant", content: nextTurn.reply }];
     const feedback = await callForFeedback(state.candidate, finalHistory, askedDays);
+    const topicsCovered = getDayDetails(askedDays).map((d) => ({ day: d.day, title: d.title }));
 
     updateSession(sessionId, {
       history: finalHistory,
@@ -195,9 +221,13 @@ const handleInterview = asyncHandler(async (req, res) => {
     return res.status(200).json({
       reply: "Interview completed.",
       done: true,
-      feedback,
+      feedback: { ...feedback, topicsCovered },
     });
   }
+
+  const currentDayDetail = nextTurn.coveredDay
+    ? dayDetails.find((d) => d.day === nextTurn.coveredDay)
+    : null;
 
   updateSession(sessionId, {
     history: [...history, { role: "assistant", content: nextTurn.reply }],
@@ -208,6 +238,10 @@ const handleInterview = asyncHandler(async (req, res) => {
   return res.status(200).json({
     reply: nextTurn.reply,
     done: false,
+    currentFocus: currentDayDetail
+      ? { day: currentDayDetail.day, title: currentDayDetail.title }
+      : null,
+    progress: { turnCount: state.turnCount + 1, distinctDaysCovered: new Set(askedDays).size },
   });
 });
 

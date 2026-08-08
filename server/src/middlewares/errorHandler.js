@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
   if (err instanceof ApiError) {
+    console.error(`[ApiError ${err.statusCode}] ${req.method} ${req.path}:`, err.message);
     return res.status(err.statusCode).json({
       success: false,
       message: err.message,

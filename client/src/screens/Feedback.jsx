@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 import { useEffect, useState } from "react";
+import confetti from "canvas-confetti";
 import ParticleField from "../components/ParticleField";
 
 const containerVariants = {
@@ -124,7 +125,43 @@ const ScoreRing = ({ strengths, gaps }) => {
   );
 };
 
+const TopicsCovered = ({ topics }) => {
+  if (!topics || topics.length === 0) return null;
+  return (
+    <motion.div variants={itemVariants} className="flex flex-wrap gap-2 justify-center mb-8">
+      {topics.map((t, i) => (
+        <motion.span
+          key={t.day}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1 + i * 0.08, type: "spring", stiffness: 200 }}
+          className="text-[11px] px-2.5 py-1 rounded-full"
+          style={{
+            background: "rgba(59,130,246,0.08)",
+            color: "#7dabf8",
+            border: "1px solid rgba(59,130,246,0.2)",
+          }}
+        >
+          Day {t.day} &middot; {t.title}
+        </motion.span>
+      ))}
+    </motion.div>
+  );
+};
+
 const Feedback = ({ candidate, feedback, onRestart }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      confetti({
+        particleCount: 90,
+        spread: 70,
+        origin: { y: 0.3 },
+        colors: ["#f5a623", "#fcd34d", "#3b82f6"],
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <motion.div
       variants={containerVariants}
@@ -150,10 +187,12 @@ const Feedback = ({ candidate, feedback, onRestart }) => {
       </motion.h1>
       <motion.p
         variants={itemVariants}
-        className="text-muted text-sm mb-8 leading-relaxed text-center max-w-lg mx-auto"
+        className="text-muted text-sm mb-6 leading-relaxed text-center max-w-lg mx-auto"
       >
         {feedback.summary}
       </motion.p>
+
+      <TopicsCovered topics={feedback.topicsCovered} />
 
       <div className="flex flex-col gap-4">
         <Section title="Strengths" items={feedback.strengths} accentClass="text-emerald-400" delay={0.5} />

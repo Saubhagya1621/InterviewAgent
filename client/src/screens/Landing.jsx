@@ -42,6 +42,18 @@ const StatChip = ({ label, value }) => (
   </motion.div>
 );
 
+const getWeakAreas = (candidate) => {
+  const missions = candidate.missions ?? [];
+  const scored = missions
+    .map((m) => ({
+      title: m.title,
+      score: m.skipped ? 100 : !m.passed ? 90 : (m.attempts ?? 1) * 10,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .filter((m) => m.score > 10);
+  return scored.slice(0, 2).map((m) => m.title);
+};
+
 const CandidateCard = ({ candidate, onSelect, index }) => {
   const { member, signals } = candidate;
   const initials = member.name
@@ -49,6 +61,7 @@ const CandidateCard = ({ candidate, onSelect, index }) => {
     .map((w) => w[0])
     .slice(0, 2)
     .join("");
+  const weakAreas = getWeakAreas(candidate);
 
   return (
     <motion.button
@@ -101,6 +114,24 @@ const CandidateCard = ({ candidate, onSelect, index }) => {
           <p className="text-muted text-xs mt-0.5">{member.jobRole}</p>
           <p className="text-muted text-[11px] mt-0.5 opacity-70">{member.yearsExperience} yrs experience</p>
         </div>
+
+        {weakAreas.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {weakAreas.map((area, i) => (
+              <span
+                key={i}
+                className="text-[10px] px-2 py-1 rounded-md leading-none"
+                style={{
+                  background: "rgba(245,166,35,0.08)",
+                  color: "#f5a623",
+                  border: "1px solid rgba(245,166,35,0.15)",
+                }}
+              >
+                Focus: {area}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="mt-auto pt-2 flex items-center gap-1.5 text-[11px] text-accent font-medium opacity-0 group-hover:opacity-100 transition-opacity">
           Start interview

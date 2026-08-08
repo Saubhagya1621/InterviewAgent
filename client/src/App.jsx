@@ -5,6 +5,7 @@ import Chat from "./screens/Chat";
 import Feedback from "./screens/Feedback";
 import RobotMascot from "./components/RobotMascot";
 import IntroScreen from "./components/IntroScreen";
+import SoundToggle from "./components/SoundToggle";
 import { startInterview } from "./api/interviewApi";
 
 const SCREEN = {
@@ -146,6 +147,7 @@ function App() {
       {mascotArrived && (
         <RobotMascot mood={mascotConfig.mood} message={mascotConfig.message} />
       )}
+      <SoundToggle />
     </>
   );
 }

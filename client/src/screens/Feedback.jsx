@@ -150,6 +150,8 @@ const TopicsCovered = ({ topics }) => {
 };
 
 const Feedback = ({ candidate, feedback, onRestart }) => {
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       confetti({
@@ -161,6 +163,30 @@ const Feedback = ({ candidate, feedback, onRestart }) => {
     }, 500);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleCopy = async () => {
+    const lines = [
+      `Interview Feedback — ${candidate.member?.name}`,
+      "",
+      `Summary: ${feedback.summary}`,
+      "",
+      "Strengths:",
+      ...feedback.strengths.map((s) => `- ${s}`),
+      "",
+      "Gaps:",
+      ...feedback.gaps.map((g) => `- ${g}`),
+      "",
+      "Next steps:",
+      ...feedback.next.map((n) => `- ${n}`),
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API unavailable; silently ignore.
+    }
+  };
 
   return (
     <motion.div
@@ -200,15 +226,25 @@ const Feedback = ({ candidate, feedback, onRestart }) => {
         <Section title="Next steps" items={feedback.next} accentClass="text-sky-400" delay={0.8} />
       </div>
 
-      <motion.button
-        variants={itemVariants}
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.96 }}
-        onClick={onRestart}
-        className="mt-8 text-sm text-muted hover:text-text underline underline-offset-4 block mx-auto"
-      >
-        Start another interview
-      </motion.button>
+      <motion.div variants={itemVariants} className="mt-8 flex items-center justify-center gap-4">
+        <button
+          onClick={handleCopy}
+          className="text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+          style={{
+            background: copied ? "rgba(52,211,153,0.12)" : "rgba(245,166,35,0.1)",
+            color: copied ? "#34d399" : "#f5a623",
+            border: `1px solid ${copied ? "rgba(52,211,153,0.3)" : "rgba(245,166,35,0.25)"}`,
+          }}
+        >
+          {copied ? "Copied ✓" : "Copy summary"}
+        </button>
+        <button
+          onClick={onRestart}
+          className="text-sm text-muted hover:text-text underline underline-offset-4"
+        >
+          Start another interview
+        </button>
+      </motion.div>
     </motion.div>
   );
 };

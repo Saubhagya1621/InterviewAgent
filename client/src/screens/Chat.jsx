@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sendMessage } from "../api/interviewApi";
 import ParticleField from "../components/ParticleField";
+import { sounds } from "../utils/sound";
 
 const bubbleVariants = {
   initial: (isUser) => ({ opacity: 0, y: 20, x: isUser ? 20 : -20, scale: 0.9 }),
@@ -93,6 +94,7 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
   const [loading, setLoading] = useState(false);
   const [questionCount, setQuestionCount] = useState(1);
   const [currentFocus, setCurrentFocus] = useState(null);
+  const [daysCovered, setDaysCovered] = useState(0);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -100,10 +102,16 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
   }, [messages, loading]);
 
   const [lastFailedMessage, setLastFailedMessage] = useState(null);
+  const [showNudge, setShowNudge] = useState(false);
 
   const handleSend = async (overrideMessage) => {
     const messageText = overrideMessage ?? input.trim();
     if (!messageText || loading) return;
+
+    if (!overrideMessage && messageText.length < 12) {
+      setShowNudge(true);
+      setTimeout(() => setShowNudge(false), 2800);
+    }
 
     const userMessage = { role: "user", content: messageText };
     if (!overrideMessage) {
@@ -112,6 +120,7 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
     setInput("");
     setLastFailedMessage(null);
     setLoading(true);
+    sounds.send();
 
     try {
       const data = await sendMessage(sessionId, userMessage.content);
@@ -121,6 +130,7 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
           ...prev,
           { role: "assistant", content: data.reply },
         ]);
+        sounds.complete();
         setTimeout(() => onComplete(data.feedback), 700);
       } else {
         setMessages((prev) => [
@@ -129,6 +139,8 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
         ]);
         setQuestionCount((c) => c + 1);
         if (data.currentFocus) setCurrentFocus(data.currentFocus);
+        if (data.progress) setDaysCovered(data.progress.distinctDaysCovered);
+        sounds.receive();
       }
     } catch (err) {
       setLastFailedMessage(userMessage.content);
@@ -199,6 +211,19 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
             <p className="text-muted text-xs uppercase tracking-wide">min. 8</p>
           </div>
           <ProgressBar questionCount={questionCount} min={8} />
+          <div className="flex gap-1 mt-1">
+            {[0, 1, 2, 3].map((i) => (
+              <motion.span
+                key={i}
+                className="w-1.5 h-1.5 rounded-full"
+                animate={{
+                  backgroundColor: i < daysCovered ? "#f5a623" : "#232d3f",
+                  scale: i < daysCovered ? 1.1 : 1,
+                }}
+                transition={{ duration: 0.3 }}
+              />
+            ))}
+          </div>
         </div>
       </motion.div>
 
@@ -238,6 +263,19 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
         </AnimatePresence>
         <div ref={scrollRef} />
       </div>
+
+      <AnimatePresence>
+        {showNudge && (
+          <motion.p
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="text-[11px] text-accent/80 mt-2 px-1"
+          >
+            Tip: a bit more detail helps the interviewer probe deeper — try explaining your reasoning.
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}

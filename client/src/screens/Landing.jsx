@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import ParticleField from "../components/ParticleField";
 import RevealText from "../components/RevealText";
@@ -71,16 +72,24 @@ const CandidateCard = ({ candidate, onSelect, index }) => {
       onClick={() => onSelect(candidate)}
       className="text-left relative overflow-hidden rounded-2xl group h-full"
       style={{
-        background: "linear-gradient(150deg, rgba(22,31,48,0.75), rgba(17,24,38,0.55))",
+        background: "linear-gradient(150deg, rgba(22,31,48,0.92), rgba(17,24,38,0.85))",
         backdropFilter: "blur(16px)",
-        border: "1px solid rgba(245,166,35,0.12)",
+        border: "1px solid rgba(245,166,35,0.14)",
       }}
     >
+      {/* subtle border-only glow, kept outside the card so it never bleeds over content */}
       <div
-        className="absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"
+        className="absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-70 transition-opacity duration-300 -z-10 pointer-events-none"
         style={{
-          background: "linear-gradient(135deg, #f5a623, transparent 50%, #3b82f6)",
-          filter: "blur(10px)",
+          background: "linear-gradient(135deg, #f5a623, transparent 55%, #3b82f6)",
+          filter: "blur(14px)",
+        }}
+      />
+      {/* solid backdrop that darkens on hover, guaranteeing text contrast */}
+      <div
+        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+        style={{
+          background: "linear-gradient(150deg, rgba(17,24,38,0.4), rgba(10,14,20,0.25))",
         }}
       />
 
@@ -145,8 +154,17 @@ const CandidateCard = ({ candidate, onSelect, index }) => {
 };
 
 const Landing = ({ candidates, onStart }) => {
+  const [search, setSearch] = useState("");
   const totalMissions = candidates.reduce((sum, c) => sum + (c.signals?.missionsCompleted ?? 0), 0);
   const avgMissions = candidates.length ? Math.round(totalMissions / candidates.length) : 0;
+  const filteredCandidates = candidates.filter((c) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      c.member.name.toLowerCase().includes(q) ||
+      c.member.jobRole.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="min-h-screen flex flex-col items-center px-6 py-16 relative">
@@ -228,8 +246,31 @@ const Landing = ({ candidates, onStart }) => {
         >
           Select a candidate to begin
         </motion.p>
+
+        {candidates.length > 3 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.9 }}
+            className="mb-4 max-w-xs mx-auto"
+          >
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or role..."
+              className="w-full text-sm px-4 py-2 rounded-full outline-none placeholder:text-muted transition-colors"
+              style={{
+                background: "rgba(22,31,48,0.6)",
+                border: "1px solid rgba(245,166,35,0.15)",
+                backdropFilter: "blur(10px)",
+              }}
+            />
+          </motion.div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {candidates.map((c, i) => (
+          {filteredCandidates.map((c, i) => (
             <CandidateCard key={c.member.id} candidate={c} onSelect={onStart} index={i} />
           ))}
         </div>
@@ -240,6 +281,15 @@ const Landing = ({ candidates, onStart }) => {
             className="text-muted text-sm text-center py-12"
           >
             No candidates available right now. Check back shortly.
+          </motion.p>
+        )}
+        {candidates.length > 0 && filteredCandidates.length === 0 && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-muted text-sm text-center py-12"
+          >
+            No candidates match "{search}".
           </motion.p>
         )}
       </motion.div>

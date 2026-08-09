@@ -1,5 +1,14 @@
 import { motion } from "framer-motion";
-import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
+import {
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis,
+  RadarChart,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  ResponsiveContainer,
+} from "recharts";
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import ParticleField from "../components/ParticleField";
@@ -125,6 +134,59 @@ const ScoreRing = ({ strengths, gaps }) => {
   );
 };
 
+const computeReadiness = (candidate, day) => {
+  const mission = (candidate.missions ?? []).find((m) => m.day === day.day);
+  if (!mission) return 65;
+  if (mission.skipped) return 20;
+  if (!mission.passed) return 40;
+  const attempts = mission.attempts ?? 1;
+  if (attempts > 2) return 60;
+  return 90;
+};
+
+const CurriculumRadar = ({ candidate, topics }) => {
+  if (!topics || topics.length < 3) return null;
+
+  const data = topics.map((t) => ({
+    subject: `Day ${t.day}`,
+    fullTitle: t.title,
+    readiness: computeReadiness(candidate, t),
+  }));
+
+  return (
+    <motion.div
+      variants={itemVariants}
+      className="rounded-2xl p-5 mb-6"
+      style={{
+        background: "linear-gradient(135deg, rgba(22,31,48,0.7), rgba(17,24,38,0.5))",
+        backdropFilter: "blur(16px)",
+        border: "1px solid rgba(245,166,35,0.12)",
+      }}
+    >
+      <p className="font-display font-semibold text-sm uppercase tracking-wide mb-1 text-center text-muted">
+        Pre-interview readiness by topic
+      </p>
+      <p className="text-[11px] text-muted text-center mb-2 opacity-70">
+        Based on your original cohort progress data
+      </p>
+      <ResponsiveContainer width="100%" height={240}>
+        <RadarChart data={data} outerRadius="70%">
+          <PolarGrid stroke="#232d3f" />
+          <PolarAngleAxis dataKey="subject" tick={{ fill: "#8a96a8", fontSize: 11 }} />
+          <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+          <Radar
+            dataKey="readiness"
+            stroke="#f5a623"
+            fill="#f5a623"
+            fillOpacity={0.25}
+            strokeWidth={2}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </motion.div>
+  );
+};
+
 const TopicsCovered = ({ topics }) => {
   if (!topics || topics.length === 0) return null;
   return (
@@ -218,6 +280,7 @@ const Feedback = ({ candidate, feedback, onRestart }) => {
         {feedback.summary}
       </motion.p>
 
+      <CurriculumRadar candidate={candidate} topics={feedback.topicsCovered} />
       <TopicsCovered topics={feedback.topicsCovered} />
 
       <div className="flex flex-col gap-4">

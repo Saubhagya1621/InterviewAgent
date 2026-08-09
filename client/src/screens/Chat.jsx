@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { sendMessage } from "../api/interviewApi";
 import ParticleField from "../components/ParticleField";
 import { sounds } from "../utils/sound";
+import TypewriterText from "../components/TypewriterText";
+import useVoiceInput from "../hooks/useVoiceInput";
 
 const bubbleVariants = {
   initial: (isUser) => ({ opacity: 0, y: 20, x: isUser ? 20 : -20, scale: 0.9 }),
@@ -10,7 +12,7 @@ const bubbleVariants = {
   exit: { opacity: 0, scale: 0.9 },
 };
 
-const Bubble = ({ role, content, isError, onRetry }) => {
+const Bubble = ({ role, content, isError, onRetry, animate: shouldAnimate, onTypeDone }) => {
   const isUser = role === "user";
   return (
     <motion.div
@@ -32,7 +34,11 @@ const Bubble = ({ role, content, isError, onRetry }) => {
             : "bg-surface border border-border text-text"
         }`}
       >
-        {content}
+        {!isUser && !isError && shouldAnimate ? (
+          <TypewriterText text={content} onDone={onTypeDone} />
+        ) : (
+          content
+        )}
         {isError && (
           <button
             onClick={onRetry}
@@ -170,6 +176,11 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
     }
   };
 
+  const { listening, supported: voiceSupported, start: startlistening, stop: stopListening } =
+    useVoiceInput((transcript) => {
+      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+    });
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -257,6 +268,8 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
               content={m.content}
               isError={m.isError}
               onRetry={handleRetry}
+              animate
+              onTypeDone={() => scrollRef.current?.scrollIntoView({ behavior: "smooth" })}
             />
           ))}
           {loading && <TypingIndicator key="typing" />}
@@ -292,10 +305,33 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type your answer..."
+          placeholder={listening ? "Listening..." : "Type your answer..."}
           rows={1}
           className="flex-1 bg-transparent outline-none resize-none text-sm px-2 py-2 placeholder:text-muted"
         />
+        {voiceSupported && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={() => (listening ? stopListening() : startlistening())}
+            className="relative w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              background: listening ? "rgba(239,68,68,0.15)" : "rgba(245,166,35,0.08)",
+              border: `1px solid ${listening ? "rgba(239,68,68,0.4)" : "rgba(245,166,35,0.2)"}`,
+            }}
+            title={listening ? "Stop recording" : "Speak your answer"}
+          >
+            {listening && (
+              <motion.span
+                className="absolute inset-0 rounded-lg"
+                style={{ border: "1px solid rgba(239,68,68,0.5)" }}
+                animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: "easeOut" }}
+              />
+            )}
+            <span className="text-sm">{listening ? "🔴" : "🎤"}</span>
+          </motion.button>
+        )}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.92 }}

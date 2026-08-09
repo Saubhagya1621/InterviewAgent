@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
+import { jsPDF } from "jspdf";
 import ParticleField from "../components/ParticleField";
 
 const containerVariants = {
@@ -226,6 +227,66 @@ const Feedback = ({ candidate, feedback, onRestart }) => {
     return () => clearTimeout(timer);
   }, []);
 
+  const handleDownloadPdf = () => {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const margin = 48;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const maxWidth = pageWidth - margin * 2;
+    let y = margin;
+
+    const addWrapped = (text, size, gap, color = "#111") => {
+      doc.setFontSize(size);
+      doc.setTextColor(color);
+      const lines = doc.splitTextToSize(text, maxWidth);
+      lines.forEach((line) => {
+        if (y > 780) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, margin, y);
+        y += size * 1.35;
+      });
+      y += gap;
+    };
+
+    doc.setFont("helvetica", "bold");
+    addWrapped("AI Interview Agent — Feedback Report", 18, 10, "#f5a623");
+    doc.setFont("helvetica", "normal");
+    addWrapped(`Candidate: ${candidate.member?.name} (${candidate.member?.jobRole})`, 11, 16, "#555");
+
+    doc.setFont("helvetica", "bold");
+    addWrapped("Summary", 13, 4);
+    doc.setFont("helvetica", "normal");
+    addWrapped(feedback.summary, 10.5, 16);
+
+    const addList = (title, items) => {
+      doc.setFont("helvetica", "bold");
+      addWrapped(title, 13, 4);
+      doc.setFont("helvetica", "normal");
+      if (items.length === 0) {
+        addWrapped("None noted for this interview.", 10.5, 12, "#888");
+      } else {
+        items.forEach((item) => addWrapped(`•  ${item}`, 10.5, 6));
+        y += 10;
+      }
+    };
+
+    addList("Strengths", feedback.strengths);
+    addList("Gaps", feedback.gaps);
+    addList("Next Steps", feedback.next);
+
+    if (feedback.topicsCovered?.length) {
+      doc.setFont("helvetica", "bold");
+      addWrapped("Curriculum Days Covered", 13, 4);
+      doc.setFont("helvetica", "normal");
+      feedback.topicsCovered.forEach((t) =>
+        addWrapped(`Day ${t.day} — ${t.title}`, 10.5, 4, "#3b82f6")
+      );
+    }
+
+    doc.save(`interview-feedback-${candidate.member?.name?.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+  };
+
   const handleCopy = async () => {
     const lines = [
       `Interview Feedback — ${candidate.member?.name}`,
@@ -300,6 +361,17 @@ const Feedback = ({ candidate, feedback, onRestart }) => {
           }}
         >
           {copied ? "Copied ✓" : "Copy summary"}
+        </button>
+        <button
+          onClick={handleDownloadPdf}
+          className="text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+          style={{
+            background: "rgba(59,130,246,0.1)",
+            color: "#7dabf8",
+            border: "1px solid rgba(59,130,246,0.25)",
+          }}
+        >
+          Download PDF
         </button>
         <button
           onClick={onRestart}

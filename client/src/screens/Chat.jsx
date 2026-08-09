@@ -108,6 +108,15 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete, onExit }) => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   const [lastFailedMessage, setLastFailedMessage] = useState(null);
   const [showNudge, setShowNudge] = useState(false);
 

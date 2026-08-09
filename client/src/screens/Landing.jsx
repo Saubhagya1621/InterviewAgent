@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import ParticleField from "../components/ParticleField";
-import RevealText from "../components/RevealText";
 
 const statsContainerVariants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1, delayChildren: 1.6 } },
+  show: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } },
 };
 
 const statItemVariants = {
@@ -15,7 +14,7 @@ const statItemVariants = {
 
 const gridVariants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.08, delayChildren: 1.9 } },
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.5 } },
 };
 
 const cardVariants = {
@@ -77,7 +76,6 @@ const CandidateCard = ({ candidate, onSelect, index }) => {
         border: "1px solid rgba(245,166,35,0.14)",
       }}
     >
-      {/* subtle border-only glow, kept outside the card so it never bleeds over content */}
       <div
         className="absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-70 transition-opacity duration-300 -z-10 pointer-events-none"
         style={{
@@ -85,7 +83,6 @@ const CandidateCard = ({ candidate, onSelect, index }) => {
           filter: "blur(14px)",
         }}
       />
-      {/* solid backdrop that darkens on hover, guaranteeing text contrast */}
       <div
         className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
         style={{
@@ -108,7 +105,7 @@ const CandidateCard = ({ candidate, onSelect, index }) => {
           <motion.div
             initial={{ scale: 0.4, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 2.1 + index * 0.07, type: "spring", stiffness: 220, damping: 14 }}
+            transition={{ delay: 0.6 + index * 0.07, type: "spring", stiffness: 220, damping: 14 }}
             className="text-right"
           >
             <p className="text-accent font-display font-bold text-lg leading-none">
@@ -153,7 +150,7 @@ const CandidateCard = ({ candidate, onSelect, index }) => {
   );
 };
 
-const Landing = ({ candidates, onStart, loading }) => {
+const Landing = ({ candidates, onStart, loading, onBack }) => {
   const [search, setSearch] = useState("");
   const totalMissions = candidates.reduce((sum, c) => sum + (c.signals?.missionsCompleted ?? 0), 0);
   const avgMissions = candidates.length ? Math.round(totalMissions / candidates.length) : 0;
@@ -170,61 +167,38 @@ const Landing = ({ candidates, onStart, loading }) => {
     <div className="min-h-screen flex flex-col items-center px-6 py-16 relative">
       <ParticleField />
 
-      <div className="max-w-2xl text-center mb-8 relative">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="inline-block mb-6"
+      <div className="w-full max-w-3xl mb-8 relative">
+        <button
+          onClick={onBack}
+          className="text-muted hover:text-accent text-sm transition-colors flex items-center gap-1.5"
         >
-          <motion.p
-            className="text-accent font-display uppercase tracking-[0.25em] text-[11px] px-4 py-1.5 rounded-full"
-            style={{
-              border: "1px solid rgba(245,166,35,0.35)",
-              background: "rgba(245,166,35,0.06)",
-            }}
-            animate={{
-              boxShadow: [
-                "0 0 0px rgba(245,166,35,0)",
-                "0 0 20px rgba(245,166,35,0.35)",
-                "0 0 0px rgba(245,166,35,0)",
-              ],
-            }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-          >
-            SignalProbe &middot; AI Cohort Interview
-          </motion.p>
-        </motion.div>
+          &larr; Back
+        </button>
+      </div>
 
-        <h1 className="font-display text-[2.75rem] md:text-6xl font-bold leading-[1.05] mb-6 tracking-tight">
-          <RevealText text="Your interviewer" className="block" />
-          <motion.span
-            initial={{ opacity: 0, y: 24, filter: "blur(6px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ delay: 0.75, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="block bg-gradient-to-r from-accent via-amber-200 to-accent bg-[length:200%_auto] bg-clip-text text-transparent"
-            style={{ animation: "shimmer 3s linear infinite" }}
-          >
-            already knows
-          </motion.span>
-          <RevealText text="where you struggled." delay={1100} className="block" />
-        </h1>
-
+      <div className="max-w-xl text-center mb-8 relative">
+        <motion.h2
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="font-display text-2xl md:text-3xl font-semibold mb-2"
+        >
+          Choose a candidate
+        </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.8, duration: 0.5 }}
-          className="text-muted text-base leading-relaxed max-w-lg mx-auto mb-8"
+          transition={{ delay: 0.05, duration: 0.4 }}
+          className="text-muted text-sm"
         >
-          Not a generic quiz. Every question is pulled from your real progress
-          through the 31-day cohort — what you skipped, retried, or barely passed.
+          Each interview adapts to this candidate's real cohort progress.
         </motion.p>
 
         <motion.div
           variants={statsContainerVariants}
           initial="hidden"
           animate="show"
-          className="flex items-center justify-center gap-4"
+          className="flex items-center justify-center gap-4 mt-6"
         >
           <StatChip label="candidates" value={candidates.length} />
           <StatChip label="avg. missions" value={avgMissions} />
@@ -236,22 +210,13 @@ const Landing = ({ candidates, onStart, loading }) => {
         variants={gridVariants}
         initial="hidden"
         animate="show"
-        className="w-full max-w-3xl mt-8 relative"
+        className="w-full max-w-3xl mt-4 relative"
       >
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.85 }}
-          className="text-muted text-sm mb-4 text-center tracking-wide"
-        >
-          Select a candidate to begin
-        </motion.p>
-
         {candidates.length > 3 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.9 }}
+            transition={{ delay: 0.4 }}
             className="mb-4 max-w-xs mx-auto"
           >
             <input
@@ -314,91 +279,6 @@ const Landing = ({ candidates, onStart, loading }) => {
           </motion.p>
         )}
       </motion.div>
-
-      {/* How it works */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-50px" }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-3xl mt-20 relative"
-      >
-        <p className="font-display font-semibold text-lg text-center mb-8">How it works</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            {
-              step: "01",
-              title: "Reads real progress",
-              desc: "Pulls each candidate's actual mission history — skipped topics, retries, first-try passes — from their 31-day cohort data.",
-            },
-            {
-              step: "02",
-              title: "Adapts the interview",
-              desc: "Picks the curriculum days most worth probing, then asks follow-ups based on how each answer actually goes.",
-            },
-            {
-              step: "03",
-              title: "Grounded feedback",
-              desc: "Ends with strengths, gaps, and next steps tied to specific curriculum days — not generic advice.",
-            },
-          ].map((s, i) => (
-            <motion.div
-              key={s.step}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.4 }}
-              className="rounded-2xl p-5"
-              style={{
-                background: "rgba(22,31,48,0.5)",
-                border: "1px solid rgba(245,166,35,0.1)",
-                backdropFilter: "blur(10px)",
-              }}
-            >
-              <p className="text-accent font-display font-bold text-2xl mb-2 opacity-60">{s.step}</p>
-              <p className="font-display font-semibold text-sm mb-2">{s.title}</p>
-              <p className="text-muted text-xs leading-relaxed">{s.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Footer */}
-      <motion.footer
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-3xl mt-16 pt-8 pb-4 text-center relative"
-        style={{ borderTop: "1px solid rgba(245,166,35,0.08)" }}
-      >
-        <p className="text-muted text-xs leading-relaxed">
-          Built by <span className="text-accent font-medium">Saubhagya Srivastava</span> for ViCodathon
-          (ABTalks Vibe Code Hackathon) — solo, 48 hours.
-        </p>
-        <p className="text-muted text-[11px] mt-2 opacity-60">
-          Node.js · Express · React · Groq (Llama 3.1) · Framer Motion
-        </p>
-        <div className="flex items-center justify-center gap-4 mt-3">
-          <a
-            href="https://github.com/Saubhagya1621"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted text-xs hover:text-accent transition-colors"
-          >
-            GitHub
-          </a>
-          <span className="text-muted opacity-30">·</span>
-          <a
-            href="https://linkedin.com/in/saubhagyasri"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted text-xs hover:text-accent transition-colors"
-          >
-            LinkedIn
-          </a>
-        </div>
-      </motion.footer>
     </div>
   );
 };

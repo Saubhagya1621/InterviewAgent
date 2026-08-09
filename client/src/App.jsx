@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Hero from "./screens/Hero";
 import Landing from "./screens/Landing";
 import Chat from "./screens/Chat";
 import Feedback from "./screens/Feedback";
@@ -10,6 +11,7 @@ import { startInterview } from "./api/interviewApi";
 
 const SCREEN = {
   INTRO: "intro",
+  HERO: "hero",
   LANDING: "landing",
   CHAT: "chat",
   FEEDBACK: "feedback",
@@ -23,6 +25,7 @@ const screenTransition = {
 };
 
 const MASCOT_CONFIG = {
+  [SCREEN.HERO]: { mood: "idle", message: "" },
   [SCREEN.LANDING]: { mood: "idle", message: "Pick a candidate to begin" },
   [SCREEN.CHAT]: { mood: "thinking", message: "" },
   [SCREEN.FEEDBACK]: { mood: "happy", message: "Interview wrapped up!" },
@@ -53,7 +56,7 @@ function App() {
   }, []);
 
   const handleIntroFinish = () => {
-    setScreen(SCREEN.LANDING);
+    setScreen(SCREEN.HERO);
     setTimeout(() => setMascotArrived(true), 350);
   };
 
@@ -98,11 +101,17 @@ function App() {
     return <IntroScreen onFinish={handleIntroFinish} />;
   }
 
-  const mascotConfig = MASCOT_CONFIG[screen] || MASCOT_CONFIG[SCREEN.LANDING];
+  const mascotConfig = MASCOT_CONFIG[screen] || MASCOT_CONFIG[SCREEN.HERO];
 
   return (
     <>
       <AnimatePresence mode="wait">
+        {screen === SCREEN.HERO && (
+          <motion.div key="hero" {...screenTransition}>
+            <Hero onContinue={() => setScreen(SCREEN.LANDING)} />
+          </motion.div>
+        )}
+
         {screen === SCREEN.LANDING && (
           <motion.div key="landing" {...screenTransition}>
             <Landing
@@ -110,6 +119,7 @@ function App() {
               onStart={handleStart}
               starting={starting}
               loading={candidatesLoading}
+              onBack={() => setScreen(SCREEN.HERO)}
             />
           </motion.div>
         )}

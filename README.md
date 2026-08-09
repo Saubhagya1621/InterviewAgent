@@ -1,6 +1,6 @@
-# AI Interview Agent
+# SignalProbe
 
-Conducts a realistic, adaptive technical interview based on a candidate's actual
+An adaptive AI technical interview agent based on a candidate's actual
 learning-progress data from a 31-day AI engineering cohort, then produces
 structured feedback.
 

@@ -250,7 +250,7 @@ const Feedback = ({ candidate, feedback, onRestart }) => {
     };
 
     doc.setFont("helvetica", "bold");
-    addWrapped("AI Interview Agent — Feedback Report", 18, 10, "#f5a623");
+    addWrapped("SignalProbe — Interview Feedback Report", 18, 10, "#f5a623");
     doc.setFont("helvetica", "normal");
     addWrapped(`Candidate: ${candidate.member?.name} (${candidate.member?.jobRole})`, 11, 16, "#555");
 

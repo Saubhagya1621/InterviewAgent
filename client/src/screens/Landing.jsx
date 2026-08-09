@@ -192,7 +192,7 @@ const Landing = ({ candidates, onStart }) => {
             }}
             transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
           >
-            AI Cohort &middot; Interview Agent
+            SignalProbe &middot; AI Cohort Interview
           </motion.p>
         </motion.div>
 

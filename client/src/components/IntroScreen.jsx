@@ -92,7 +92,7 @@ const IntroScreen = ({ onFinish }) => {
 
       <div className="mt-8 text-center">
         <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight">
-          <RevealText text="AI Interview Agent" delay={500} />
+          <RevealText text="SignalProbe" delay={500} />
         </h1>
         <motion.p
           initial={{ opacity: 0 }}

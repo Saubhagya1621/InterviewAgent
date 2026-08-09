@@ -221,7 +221,7 @@ const handleInterview = asyncHandler(async (req, res) => {
     return res.status(200).json({
       reply: "Interview completed.",
       done: true,
-      feedback: { ...feedback, topicsCovered },
+      feedback: { ...feedback, topicsCovered, transcript: finalHistory },
     });
   }
 

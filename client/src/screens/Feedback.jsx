@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   RadialBarChart,
   RadialBar,
@@ -214,6 +214,7 @@ const TopicsCovered = ({ topics }) => {
 
 const Feedback = ({ candidate, feedback, onRestart }) => {
   const [copied, setCopied] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -380,6 +381,53 @@ const Feedback = ({ candidate, feedback, onRestart }) => {
           Start another interview
         </button>
       </motion.div>
+
+      {feedback.transcript?.length > 0 && (
+        <motion.div variants={itemVariants} className="mt-6">
+          <button
+            onClick={() => setShowTranscript((v) => !v)}
+            className="text-xs text-muted hover:text-text mx-auto block items-center gap-1.5"
+          >
+            {showTranscript ? "Hide" : "View"} full transcript
+            <motion.span animate={{ rotate: showTranscript ? 180 : 0 }} transition={{ duration: 0.2 }}>
+              ▾
+            </motion.span>
+          </button>
+
+          <AnimatePresence>
+            {showTranscript && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="mt-4 rounded-2xl p-5 flex flex-col gap-3 max-h-96 overflow-y-auto"
+                  style={{
+                    background: "rgba(17,24,38,0.5)",
+                    border: "1px solid rgba(245,166,35,0.1)",
+                  }}
+                >
+                  {feedback.transcript.map((m, i) => (
+                    <div
+                      key={i}
+                      className={`text-xs leading-relaxed ${
+                        m.role === "user" ? "text-accent" : "text-muted"
+                      }`}
+                    >
+                      <span className="font-semibold uppercase tracking-wide mr-2 opacity-70">
+                        {m.role === "user" ? "Candidate" : "Interviewer"}
+                      </span>
+                      {m.content}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      )}
     </motion.div>
   );
 };

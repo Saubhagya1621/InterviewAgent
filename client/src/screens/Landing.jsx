@@ -153,7 +153,7 @@ const CandidateCard = ({ candidate, onSelect, index }) => {
   );
 };
 
-const Landing = ({ candidates, onStart }) => {
+const Landing = ({ candidates, onStart, loading }) => {
   const [search, setSearch] = useState("");
   const totalMissions = candidates.reduce((sum, c) => sum + (c.signals?.missionsCompleted ?? 0), 0);
   const avgMissions = candidates.length ? Math.round(totalMissions / candidates.length) : 0;
@@ -269,12 +269,33 @@ const Landing = ({ candidates, onStart }) => {
           </motion.div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filteredCandidates.map((c, i) => (
-            <CandidateCard key={c.member.id} candidate={c} onSelect={onStart} index={i} />
-          ))}
-        </div>
-        {candidates.length === 0 && (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[0, 1, 2, 3].map((i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.05 }}
+                className="h-32 rounded-2xl"
+                style={{ background: "rgba(22,31,48,0.4)", border: "1px solid rgba(245,166,35,0.06)" }}
+              >
+                <motion.div
+                  className="w-full h-full rounded-2xl"
+                  animate={{ opacity: [0.4, 0.7, 0.4] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                />
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {filteredCandidates.map((c, i) => (
+              <CandidateCard key={c.member.id} candidate={c} onSelect={onStart} index={i} />
+            ))}
+          </div>
+        )}
+        {!loading && candidates.length === 0 && (
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

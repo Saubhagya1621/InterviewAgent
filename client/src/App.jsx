@@ -38,6 +38,7 @@ function App() {
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
   const [mascotArrived, setMascotArrived] = useState(false);
+  const [candidatesLoading, setCandidatesLoading] = useState(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -47,7 +48,8 @@ function App() {
     fetch("/candidates.json")
       .then((res) => res.json())
       .then((data) => setCandidates(data.candidates || []))
-      .catch(() => setError("Could not load candidate data"));
+      .catch(() => setError("Could not load candidate data"))
+      .finally(() => setCandidatesLoading(false));
   }, []);
 
   const handleIntroFinish = () => {
@@ -103,7 +105,12 @@ function App() {
       <AnimatePresence mode="wait">
         {screen === SCREEN.LANDING && (
           <motion.div key="landing" {...screenTransition}>
-            <Landing candidates={candidates} onStart={handleStart} starting={starting} />
+            <Landing
+              candidates={candidates}
+              onStart={handleStart}
+              starting={starting}
+              loading={candidatesLoading}
+            />
           </motion.div>
         )}
 
@@ -114,6 +121,7 @@ function App() {
               candidate={candidate}
               initialReply={initialReply}
               onComplete={handleComplete}
+              onExit={handleRestart}
             />
           </motion.div>
         )}

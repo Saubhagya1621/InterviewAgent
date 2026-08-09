@@ -92,7 +92,7 @@ const ProgressBar = ({ questionCount, min }) => {
   );
 };
 
-const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
+const Chat = ({ sessionId, candidate, initialReply, onComplete, onExit }) => {
   const [messages, setMessages] = useState([
     { role: "assistant", content: initialReply },
   ]);
@@ -101,6 +101,7 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
   const [questionCount, setQuestionCount] = useState(1);
   const [currentFocus, setCurrentFocus] = useState(null);
   const [daysCovered, setDaysCovered] = useState(0);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -199,11 +200,20 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
           border: "1px solid rgba(245,166,35,0.12)",
         }}
       >
-        <div>
-          <p className="font-display font-semibold text-lg">
-            {candidate.member?.name}
-          </p>
-          <p className="text-muted text-xs">{candidate.member?.jobRole}</p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowExitConfirm(true)}
+            className="text-muted hover:text-red-300 transition-colors text-lg leading-none px-1"
+            title="Exit interview"
+          >
+            &larr;
+          </button>
+          <div>
+            <p className="font-display font-semibold text-lg">
+              {candidate.member?.name}
+            </p>
+            <p className="text-muted text-xs">{candidate.member?.jobRole}</p>
+          </div>
         </div>
         <div className="text-right flex flex-col items-end gap-1.5">
           <div className="flex items-baseline gap-1.5">
@@ -342,6 +352,52 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete }) => {
           Send
         </motion.button>
       </motion.div>
+
+      <AnimatePresence>
+        {showExitConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-6"
+            style={{ background: "rgba(10,14,20,0.85)", backdropFilter: "blur(6px)" }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="max-w-sm w-full rounded-2xl p-6 text-center"
+              style={{
+                background: "linear-gradient(135deg, rgba(22,31,48,0.95), rgba(17,24,38,0.9))",
+                border: "1px solid rgba(245,166,35,0.15)",
+              }}
+            >
+              <p className="font-display font-semibold text-base mb-2">Exit this interview?</p>
+              <p className="text-muted text-sm mb-5">
+                Your progress won&apos;t be saved. You can start fresh with any candidate.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => setShowExitConfirm(false)}
+                  className="text-sm px-4 py-2 rounded-lg text-muted hover:text-text transition-colors"
+                >
+                  Stay
+                </button>
+                <button
+                  onClick={onExit}
+                  className="text-sm px-4 py-2 rounded-lg font-medium"
+                  style={{
+                    background: "rgba(239,68,68,0.12)",
+                    color: "#f87171",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                  }}
+                >
+                  Exit interview
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

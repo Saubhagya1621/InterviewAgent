@@ -314,6 +314,91 @@ const Landing = ({ candidates, onStart, loading }) => {
           </motion.p>
         )}
       </motion.div>
+
+      {/* How it works */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-3xl mt-20 relative"
+      >
+        <p className="font-display font-semibold text-lg text-center mb-8">How it works</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            {
+              step: "01",
+              title: "Reads real progress",
+              desc: "Pulls each candidate's actual mission history — skipped topics, retries, first-try passes — from their 31-day cohort data.",
+            },
+            {
+              step: "02",
+              title: "Adapts the interview",
+              desc: "Picks the curriculum days most worth probing, then asks follow-ups based on how each answer actually goes.",
+            },
+            {
+              step: "03",
+              title: "Grounded feedback",
+              desc: "Ends with strengths, gaps, and next steps tied to specific curriculum days — not generic advice.",
+            },
+          ].map((s, i) => (
+            <motion.div
+              key={s.step}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1, duration: 0.4 }}
+              className="rounded-2xl p-5"
+              style={{
+                background: "rgba(22,31,48,0.5)",
+                border: "1px solid rgba(245,166,35,0.1)",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              <p className="text-accent font-display font-bold text-2xl mb-2 opacity-60">{s.step}</p>
+              <p className="font-display font-semibold text-sm mb-2">{s.title}</p>
+              <p className="text-muted text-xs leading-relaxed">{s.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Footer */}
+      <motion.footer
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-3xl mt-16 pt-8 pb-4 text-center relative"
+        style={{ borderTop: "1px solid rgba(245,166,35,0.08)" }}
+      >
+        <p className="text-muted text-xs leading-relaxed">
+          Built by <span className="text-accent font-medium">Saubhagya Srivastava</span> for ViCodathon
+          (ABTalks Vibe Code Hackathon) — solo, 48 hours.
+        </p>
+        <p className="text-muted text-[11px] mt-2 opacity-60">
+          Node.js · Express · React · Groq (Llama 3.1) · Framer Motion
+        </p>
+        <div className="flex items-center justify-center gap-4 mt-3">
+          <a
+            href="https://github.com/Saubhagya1621"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted text-xs hover:text-accent transition-colors"
+          >
+            GitHub
+          </a>
+          <span className="text-muted opacity-30">·</span>
+          <a
+            href="https://linkedin.com/in/saubhagyasri"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted text-xs hover:text-accent transition-colors"
+          >
+            LinkedIn
+          </a>
+        </div>
+      </motion.footer>
     </div>
   );
 };

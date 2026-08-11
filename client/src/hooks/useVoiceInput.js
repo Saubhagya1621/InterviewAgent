@@ -5,11 +5,13 @@ import { useEffect, useRef, useState } from "react";
 const useVoiceInput = (onTranscript) => {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(false);
+  const [voiceError, setVoiceError] = useState(null);
   const recognitionRef = useRef(null);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
+      console.warn("[useVoiceInput] SpeechRecognition not supported in this browser.");
       setSupported(false);
       return;
     }
@@ -20,15 +22,28 @@ const useVoiceInput = (onTranscript) => {
     recognition.interimResults = false;
     recognition.lang = "en-US";
 
+    recognition.onstart = () => {
+      console.log("[useVoiceInput] Recognition started.");
+    };
+
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
         .map((r) => r[0].transcript)
         .join(" ");
+      console.log("[useVoiceInput] Transcript:", transcript);
       onTranscript(transcript);
     };
 
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+    recognition.onend = () => {
+      console.log("[useVoiceInput] Recognition ended.");
+      setListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("[useVoiceInput] Recognition error:", event.error);
+      setVoiceError(event.error);
+      setListening(false);
+    };
 
     recognitionRef.current = recognition;
 
@@ -40,11 +55,13 @@ const useVoiceInput = (onTranscript) => {
 
   const start = () => {
     if (!recognitionRef.current || listening) return;
+    setVoiceError(null);
     try {
       recognitionRef.current.start();
       setListening(true);
-    } catch {
-      // Already started or blocked; ignore.
+    } catch (err) {
+      console.error("[useVoiceInput] start() threw:", err);
+      setVoiceError(err.message || "start_failed");
     }
   };
 
@@ -53,7 +70,7 @@ const useVoiceInput = (onTranscript) => {
     setListening(false);
   };
 
-  return { listening, supported, start, stop };
+  return { listening, supported, start, stop, voiceError };
 };
 
 export default useVoiceInput;

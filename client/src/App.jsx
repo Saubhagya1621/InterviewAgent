@@ -40,6 +40,7 @@ function App() {
   const [feedback, setFeedback] = useState(null);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
+  const [startSlow, setStartSlow] = useState(false);
   const [mascotArrived, setMascotArrived] = useState(false);
   const [candidatesLoading, setCandidatesLoading] = useState(true);
 
@@ -63,8 +64,11 @@ function App() {
   const handleStart = async (selected) => {
     setCandidate(selected);
     setStarting(true);
+    setStartSlow(false);
     const newSessionId = `${selected.member.id}-${Date.now()}`;
     setSessionId(newSessionId);
+
+    const slowTimer = setTimeout(() => setStartSlow(true), 4000);
 
     try {
       const data = await startInterview(newSessionId, selected);
@@ -73,7 +77,9 @@ function App() {
     } catch (err) {
       setError("Could not start the interview. Is the backend running?");
     } finally {
+      clearTimeout(slowTimer);
       setStarting(false);
+      setStartSlow(false);
     }
   };
 
@@ -157,7 +163,9 @@ function App() {
               animate={{ rotate: 360 }}
               transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
             />
-            <p className="text-muted text-sm">Starting your interview...</p>
+            <p className="text-muted text-sm">
+              {startSlow ? "Waking up the server — this can take up to 50s..." : "Starting your interview..."}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { sendMessage } from "../api/interviewApi";
+import { sendMessage, checkHealth } from "../api/interviewApi";
 import ParticleField from "../components/ParticleField";
 import { sounds } from "../utils/sound";
 import TypewriterText from "../components/TypewriterText";
@@ -12,7 +12,7 @@ const bubbleVariants = {
   exit: { opacity: 0, scale: 0.9 },
 };
 
-const Bubble = ({ role, content, isError, onRetry, animate: shouldAnimate, onTypeDone }) => {
+const Bubble = ({ role, content, isError, isSessionExpired, onRetry, onSessionExpiredRestart, animate: shouldAnimate, onTypeDone }) => {
   const isUser = role === "user";
   return (
     <motion.div
@@ -27,14 +27,14 @@ const Bubble = ({ role, content, isError, onRetry, animate: shouldAnimate, onTyp
       <motion.div
         whileHover={{ scale: 1.015 }}
         className={`max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
-          isError
+          isError || isSessionExpired
             ? "bg-red-500/10 border border-red-500/30 text-red-300"
             : isUser
             ? "bg-accent text-bg font-medium shadow-lg shadow-accent/20"
             : "bg-surface border border-border text-text"
         }`}
       >
-        {!isUser && !isError && shouldAnimate ? (
+        {!isUser && !isError && !isSessionExpired && shouldAnimate ? (
           <TypewriterText text={content} onDone={onTypeDone} />
         ) : (
           content
@@ -45,6 +45,14 @@ const Bubble = ({ role, content, isError, onRetry, animate: shouldAnimate, onTyp
             className="block mt-2 text-xs font-medium text-red-300 underline underline-offset-2 hover:text-red-200"
           >
             Retry
+          </button>
+        )}
+        {isSessionExpired && (
+          <button
+            onClick={onSessionExpiredRestart}
+            className="block mt-2 text-xs font-medium text-red-300 underline underline-offset-2 hover:text-red-200"
+          >
+            Restart interview
           </button>
         )}
       </motion.div>
@@ -119,6 +127,7 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete, onExit }) => {
 
   const [lastFailedMessage, setLastFailedMessage] = useState(null);
   const [showNudge, setShowNudge] = useState(false);
+  const [wakingUp, setWakingUp] = useState(false);
 
   const handleSend = async (overrideMessage) => {
     const messageText = overrideMessage ?? input.trim();
@@ -159,24 +168,65 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete, onExit }) => {
         sounds.receive();
       }
     } catch (err) {
-      setLastFailedMessage(userMessage.content);
+      const status = err.response?.status;
+      const isSessionError = status >= 400 && status < 500;
+
+      setLastFailedMessage(isSessionError ? null : userMessage.content);
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Couldn't reach the interviewer. Check your connection and retry.",
-          isError: true,
-        },
+        isSessionError
+          ? {
+              role: "assistant",
+              content:
+                "This interview session has expired or was reset. Please restart to continue.",
+              isSessionExpired: true,
+            }
+          : {
+              role: "assistant",
+              content: "Couldn't reach the interviewer. Check your connection and retry.",
+              isError: true,
+            },
       ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     if (!lastFailedMessage) return;
     setMessages((prev) => prev.filter((m) => !m.isError));
-    handleSend(lastFailedMessage);
+
+    const alreadyHealthy = await checkHealth();
+    if (alreadyHealthy) {
+      handleSend(lastFailedMessage);
+      return;
+    }
+
+    // Backend likely asleep (Render free-tier cold start). Poll until it
+    // responds, then automatically resend the failed message.
+    setWakingUp(true);
+    let attempts = 0;
+    const maxAttempts = 20; // ~60s at 3s intervals
+    const poll = setInterval(async () => {
+      attempts += 1;
+      const healthy = await checkHealth();
+      if (healthy || attempts >= maxAttempts) {
+        clearInterval(poll);
+        setWakingUp(false);
+        if (healthy) {
+          handleSend(lastFailedMessage);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "The server is taking longer than expected to wake up. Please try again in a moment.",
+              isError: true,
+            },
+          ]);
+        }
+      }
+    }, 3000);
   };
 
   const handleKeyDown = (e) => {
@@ -286,12 +336,39 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete, onExit }) => {
               role={m.role}
               content={m.content}
               isError={m.isError}
+              isSessionExpired={m.isSessionExpired}
               onRetry={handleRetry}
+              onSessionExpiredRestart={onExit}
               animate
               onTypeDone={() => scrollRef.current?.scrollIntoView({ behavior: "smooth" })}
             />
           ))}
           {loading && <TypingIndicator key="typing" />}
+          {wakingUp && (
+            <motion.div
+              key="waking"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex justify-start"
+            >
+              <div
+                className="rounded-xl px-4 py-3 text-xs flex items-center gap-2"
+                style={{
+                  background: "rgba(245,166,35,0.08)",
+                  border: "1px solid rgba(245,166,35,0.2)",
+                  color: "#f5a623",
+                }}
+              >
+                <motion.span
+                  className="w-3 h-3 rounded-full border-2 border-accent/40 border-t-accent"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                />
+                Waking up the server (free tier can take up to 50s)...
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
         <div ref={scrollRef} />
       </div>
@@ -354,7 +431,7 @@ const Chat = ({ sessionId, candidate, initialReply, onComplete, onExit }) => {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.92 }}
-          onClick={handleSend}
+          onClick={() => handleSend()}
           disabled={loading || !input.trim()}
           className="bg-accent text-bg font-medium text-sm px-4 py-2 rounded-lg disabled:opacity-40"
         >

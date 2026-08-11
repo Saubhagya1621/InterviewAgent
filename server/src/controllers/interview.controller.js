@@ -64,6 +64,12 @@ const callForNextTurn = async (systemPrompt, history) => {
   const result = NextTurnSchema.safeParse(parsed);
   if (result.success) return result.data;
 
+  console.error("[callForNextTurn] Schema validation failed on first attempt.");
+  console.error("[callForNextTurn] Raw output:", raw);
+  if (parsed && !result.success) {
+    console.error("[callForNextTurn] Validation errors:", JSON.stringify(result.error.issues));
+  }
+
   // one retry with a stricter nudge
   let retryRaw;
   try {
@@ -87,7 +93,13 @@ const callForNextTurn = async (systemPrompt, history) => {
   const retryResult = NextTurnSchema.safeParse(retryParsed);
   if (retryResult.success) return retryResult.data;
 
-  throw new ApiError(502, "Interview agent failed to produce a valid response");
+  console.error("[callForNextTurn] Schema validation failed on retry.");
+  console.error("[callForNextTurn] Retry raw output:", retryRaw);
+  if (retryParsed && !retryResult.success) {
+    console.error("[callForNextTurn] Retry validation errors:", JSON.stringify(retryResult.error.issues));
+  }
+
+  return null; // signal to caller: use deterministic fallback
 };
 
 const callForFeedback = async (candidate, history, coveredDays) => {
@@ -198,7 +210,9 @@ const handleInterview = asyncHandler(async (req, res) => {
 
   const history = [...state.history, { role: "user", content: message }];
 
-  const nextTurn = await callForNextTurn(systemPrompt, history);
+  const nextTurn =
+    (await callForNextTurn(systemPrompt, history)) ??
+    buildFallbackQuestion(dayDetails, state.askedDays);
 
   const askedDays = nextTurn.coveredDay
     ? [...new Set([...state.askedDays, nextTurn.coveredDay])]

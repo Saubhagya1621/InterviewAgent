@@ -5,6 +5,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const client = axios.create({
   baseURL: `${API_BASE}/api`,
   headers: { "Content-Type": "application/json" },
+  timeout: 35000,
 });
 
 const startInterview = async (sessionId, candidate) => {
@@ -17,4 +18,15 @@ const sendMessage = async (sessionId, message) => {
   return data;
 };
 
-export { startInterview, sendMessage };
+// Pings the backend health endpoint. Used to detect and wait out
+// Render free-tier cold starts, which can take 30-50s.
+const checkHealth = async () => {
+  try {
+    await axios.get(`${API_BASE}/health`, { timeout: 5000 });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export { startInterview, sendMessage, checkHealth };
